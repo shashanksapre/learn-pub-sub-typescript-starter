@@ -12,8 +12,14 @@ async function main() {
 
   const publishCh = await conn.createConfirmChannel();
 
+  const exchange = await publishCh.assertExchange(
+    ExchangePerilDirect,
+    "direct",
+    {}
+  );
+
   try {
-    await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
+    await publishJSON(publishCh, exchange.exchange, PauseKey, {
       isPaused: true,
     });
   } catch (err) {
