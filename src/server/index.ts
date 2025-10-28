@@ -1,5 +1,5 @@
 import amqp from "amqplib";
-import { publishJSON } from "../internal/pubsub/publishJSON.js";
+import { publishJSON } from "../internal/pubsub/publish.js";
 import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
 
 const CONN_STRING = "amqp://guest:guest@localhost:5672/";
@@ -10,9 +10,15 @@ async function main() {
   const conn = await amqp.connect(CONN_STRING);
   console.log("connected to RabbitMQ");
 
-  const cCh = await conn.createConfirmChannel();
+  const publishCh = await conn.createConfirmChannel();
 
-  await publishJSON(cCh, ExchangePerilDirect, PauseKey, { IsPaused: true });
+  try {
+    await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
+      isPaused: true,
+    });
+  } catch (err) {
+    console.error("Error publishing message:", err);
+  }
 
   process.on("SIGINT", async () => {
     await conn.close();
