@@ -1,8 +1,9 @@
 import amqp from "amqplib";
 import { publishJSON } from "../internal/pubsub/publish.js";
 import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
-import { clientWelcome } from "../internal/gamelogic/gamelogic.js";
+import { clientWelcome, getInput } from "../internal/gamelogic/gamelogic.js";
 import { declareAndBind } from "../internal/pubsub/queue.js";
+import { commandSpawn } from "../internal/gamelogic/spawn.js";
 
 const CONN_STRING = "amqp://guest:guest@localhost:5672/";
 
@@ -31,6 +32,33 @@ async function main() {
     PauseKey,
     "Transient"
   );
+
+  while (1) {
+    try {
+      const inputs = await getInput("$$$@PR3 > ");
+      if (inputs.length == 0) {
+        continue;
+      }
+      if (inputs[0] === "spawn") {
+        console.log("Sending a pause...");
+        commandSpawn()
+      } else if (inputs[0] === "resume") {
+        console.log("Sending a resume...");
+        await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
+          isPaused: false,
+        });
+      } else if (inputs[0] === "quit") {
+        await conn.close();
+        console.log("RabbitMQ connection closed.");
+        console.log("shutting down...");
+        process.exit(0);
+      } else {
+        console.log("What?");
+      }
+    } catch (err) {
+      console.error("Error publishing message:", err);
+    }
+  }
 
   process.on("SIGINT", async () => {
     await conn.close();
